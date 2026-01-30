@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B.H.Ai Assistant</title>
+    <style>
+        :root { --neon: #00f2ff; --bg: #0d0d12; --card: #1a1a24; }
+        body { background: var(--bg); color: white; font-family: sans-serif; padding: 20px; margin: 0; }
+        .header { text-align: center; border-bottom: 2px solid var(--neon); padding-bottom: 10px; }
+        .card { background: var(--card); padding: 15px; border-radius: 12px; margin-top: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .btn { width: 100%; padding: 15px; margin: 5px 0; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn-ai { background: var(--neon); color: black; }
+        .btn-tube { background: #ff0000; color: white; }
+        #output { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; min-height: 50px; margin-top: 10px; border-left: 4px solid var(--neon); line-height: 1.5; }
+        .planner { font-size: 0.9em; color: #aaa; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h2 style="margin:0;">B.H.Ai</h2>
+    <p style="font-size:0.8em; color:var(--neon);">NEOBLADE yt Intelligence</p>
+</div>
+
+<div class="card">
+    <button class="btn btn-ai" onclick="startVoice()">🎙️ SPEAK COMMAND (ML/EN)</button>
+    <div id="status" style="font-size:0.7em; margin-bottom:5px;">System: Ready</div>
+    <div id="output">B.H.Ai: Hello Blade. How can I help with your homework or channel today?</div>
+</div>
+
+<div class="card">
+    <button class="btn btn-tube" onclick="window.open('https://studio.youtube.com')">🎬 OPEN CHANNEL</button>
+    <button class="btn" style="background:#444; color:white;" onclick="saveIdea()">📝 SAVE VIDEO IDEA</button>
+    <div class="planner" id="planner-list">Saved Ideas: None</div>
+</div>
+
+<script>
+    const API_KEY = "AIzaSyCIqlIQSaYgwFsa6c4gXI9tuK_YTissn5Y";
+    const statusDiv = document.getElementById('status');
+    const outputDiv = document.getElementById('output');
+
+    // 1. Voice Recognition
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US'; // Use 'ml-IN' for Malayalam default
+
+    function startVoice() {
+        recognition.start();
+        statusDiv.innerText = "System: Listening...";
+    }
+
+    recognition.onresult = async (event) => {
+        const transcript = event.results[0][0].transcript;
+        statusDiv.innerText = "System: Processing...";
+        outputDiv.innerText = "You said: " + transcript;
+        
+        // Handle Action Commands Locally
+        if(transcript.toLowerCase().includes("homework")) {
+            window.open("https://www.google.com/search?q=homework+helper");
+            speak("Opening homework helper.");
+        } else {
+            // Ask the AI
+            const aiResponse = await askGemini(transcript);
+            outputDiv.innerText = "B.H.Ai: " + aiResponse;
+            speak(aiResponse);
+        }
+    };
+
+    // 2. Intelligence (AI Brain)
+    async function askGemini(text) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+        const payload = {
+            contents: [{ parts: [{ text: `You are B.H.Ai, an AI for NEOBLADE yt. Short help for: ${text}` }] }]
+        };
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+            statusDiv.innerText = "System: Online";
+            return data.candidates[0].content.parts[0].text;
+        } catch (error) {
+            return "Connection Error. Check your internet.";
+        }
+    }
+
+    // 3. Voice Response
+    function speak(text) {
+        const speech = new SpeechSynthesisUtterance(text);
+        window.speechSynthesis.speak(speech);
+    }
+
+    // 4. Video Planner
+    function saveIdea() {
+        const idea = prompt("Enter your video idea:");
+        if (idea) {
+            let ideas = JSON.parse(localStorage.getItem('ideas') || "[]");
+            ideas.push(idea);
+            localStorage.setItem('ideas', JSON.stringify(ideas));
+            document.getElementById('planner-list').innerText = "Saved: " + ideas.join(", ");
+        }
+    }
+</script>
+</body>
+  </html>
+                                                                               

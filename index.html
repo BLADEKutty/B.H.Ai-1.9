@@ -3,103 +3,132 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>B.H.Ai - NEOBLADE yt</title>
+    <title>Bhai - Lens & Voice Agent</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
     <style>
-        :root { --neon: #00f2ff; --bg: #050508; }
-        body { background: var(--bg); color: white; font-family: 'Courier New', monospace; text-align: center; margin: 0; padding: 20px; }
+        :root { --neon: #00f2ff; --bg: #05050a; }
+        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; text-align: center; overflow: hidden; }
         
-        /* FUNCTIONAL AI FACE */
-        .ai-face { height: 150px; display: flex; justify-content: center; align-items: center; margin-bottom: 20px; }
-        .eye { width: 80px; height: 80px; border: 4px solid var(--neon); border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: 0 0 20px var(--neon); position: relative; }
-        .pupil { width: 30px; height: 30px; background: var(--neon); border-radius: 50%; box-shadow: 0 0 30px var(--neon); transition: 0.2s; }
+        /* THE BHAI "LENS" VIEW */
+        #lens-container { position: relative; width: 100vw; height: 60vh; background: #000; border-bottom: 3px solid var(--neon); }
+        #video { width: 100%; height: 100%; object-fit: cover; }
+        #canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
         
-        /* Speaking Animation */
-        .talking .pupil { animation: talkPulse 0.3s infinite alternate; }
-        @keyframes talkPulse { 0% { transform: scale(1); } 100% { transform: scale(1.5); opacity: 0.5; } }
+        /* SCANNING INTERFACE */
+        .scan-line { position: absolute; top: 0; width: 100%; height: 4px; background: var(--neon); box-shadow: 0 0 20px var(--neon); animation: scan 3s infinite linear; opacity: 0.5; }
+        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
 
-        .console { background: #11111a; padding: 15px; border-radius: 15px; border: 1px solid #333; text-align: left; font-size: 0.9rem; margin-top: 20px; }
-        .btn { width: 100%; padding: 20px; border-radius: 15px; border: none; font-weight: bold; font-size: 1.2rem; cursor: pointer; margin-top: 10px; }
-        .btn-mic { background: var(--neon); color: black; box-shadow: 0 0 15px var(--neon); }
-        .status { font-size: 0.7rem; color: #555; margin-bottom: 10px; }
+        .dashboard { padding: 20px; background: #0a0a15; height: 40vh; }
+        #ai-status { font-size: 0.7rem; color: var(--neon); letter-spacing: 2px; margin-bottom: 10px; }
+        #ai-log { font-size: 1.1rem; border-left: 3px solid var(--neon); padding-left: 15px; text-align: left; min-height: 80px; }
+        .bhai-orb { width: 60px; height: 60px; background: var(--neon); border-radius: 50%; margin: 10px auto; box-shadow: 0 0 30px var(--neon); }
+        .active { animation: pulse 0.5s infinite alternate; }
+        @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.2); } }
     </style>
 </head>
 <body>
 
-    <div class="status" id="status">B.H.Ai V3.0 ONLINE</div>
+<div id="lens-container">
+    <video id="video" autoplay muted playsinline></video>
+    <canvas id="canvas"></canvas>
+    <div class="scan-line"></div>
+</div>
 
-    <div class="ai-face" id="aiFace">
-        <div class="eye">
-            <div class="pupil"></div>
-        </div>
-    </div>
+<div class="dashboard">
+    <div id="ai-status">SYSTEMS ONLINE | WAKE-WORD: "BHAI"</div>
+    <div class="bhai-orb" id="orb"></div>
+    <div id="ai-log">Bhai: I am watching. Say "Bhai" and show me something to identify.</div>
+</div>
 
-    <h2 style="color:var(--neon); margin:0;">NEOBLADE yt</h2>
-    <div class="console" id="console">
-        B.H.Ai: Hello Blade. I am connected to the Gemini brain. Tap the button to speak.
-    </div>
+<script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const aiLog = document.getElementById('ai-log');
+    const orb = document.getElementById('orb');
+    let lensModel;
 
-    <button class="btn btn-mic" id="micBtn">🎙️ ACTIVATE COMMAND</button>
+    // 1. VOICE ACTIVATION (The "Bhai" Wake-word)
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.continuous = true;
+    recognition.lang = 'en-US';
 
-    <script>
-        const API_KEY = "AIzaSyCIqlIQSaYgwFsa6c4gXI9tuK_YTissn5Y";
-        const URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+    recognition.onresult = (event) => {
+        const speech = event.results[event.results.length - 1][0].transcript.toLowerCase();
+        console.log("Heard:", speech);
+
+        if (speech.includes("bhai") || speech.includes("bh ai")) {
+            activateBhai(speech);
+        }
+    };
+
+    function activateBhai(speech) {
+        orb.classList.add('active');
+        aiLog.innerText = "Bhai: Yes, NEOBLADE? I'm listening.";
         
-        const consoleDiv = document.getElementById('console');
-        const micBtn = document.getElementById('micBtn');
-        const aiFace = document.getElementById('aiFace');
+        // Intelligent Action Mapping
+        if(speech.includes("search")) {
+            const query = speech.split("search")[1];
+            window.open(`https://www.google.com/search?q=${query}`);
+        } else if(speech.includes("youtube") || speech.includes("channel")) {
+            window.open("https://studio.youtube.com");
+            respond("Opening your channel dashboard now.");
+        } else if(speech.includes("what is this") || speech.includes("look")) {
+            scanObject();
+        }
+    }
 
-        // 1. STABLE VOICE ENGINE
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SpeechRecognition) {
-            consoleDiv.innerText = "Error: Browser doesn't support Voice. Use Chrome.";
+    // 2. BHAI LENS (Google Lens-style recognition)
+    async function initLens() {
+        lensModel = await cocoSsd.load();
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        video.srcObject = stream;
+        detectFrame();
+    }
+
+    async function detectFrame() {
+        const predictions = await lensModel.detect(video);
+        drawPredictions(predictions);
+        requestAnimationFrame(detectFrame);
+    }
+
+    function drawPredictions(predictions) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        predictions.forEach(p => {
+            ctx.strokeStyle = "#00f2ff";
+            ctx.lineWidth = 4;
+            ctx.strokeRect(...p.bbox);
+            ctx.fillStyle = "#00f2ff";
+            ctx.fillText(p.class.toUpperCase(), p.bbox[0], p.bbox[1] > 10 ? p.bbox[1] - 5 : 10);
+        });
+    }
+
+    async function scanObject() {
+        const predictions = await lensModel.detect(video);
+        if(predictions.length > 0) {
+            const item = predictions[0].class;
+            respond(`I see a ${item}. Should I search for more details on this?`);
+            window.open(`https://www.google.com/search?q=${item}`);
         } else {
-            const recognition = new SpeechRecognition();
-            recognition.lang = 'en-US';
-
-            micBtn.onclick = () => {
-                try {
-                    recognition.start();
-                    consoleDiv.innerText = "Listening...";
-                    micBtn.innerText = "🔴 LISTENING...";
-                } catch(e) { console.log("Already started"); }
-            };
-
-            recognition.onresult = async (event) => {
-                const text = event.results[0][0].transcript;
-                consoleDiv.innerText = "You: " + text;
-                await askGemini(text);
-            };
-
-            recognition.onend = () => { micBtn.innerText = "🎙️ ACTIVATE COMMAND"; };
+            respond("I can't clearly see the object. Move closer.");
         }
+    }
 
-        // 2. STABLE AI BRAIN
-        async function askGemini(text) {
-            try {
-                const response = await fetch(URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ contents: [{ parts: [{ text: "Help NEOBLADE yt with: " + text }] }] })
-                });
-                const data = await response.json();
-                const aiMsg = data.candidates[0].content.parts[0].text;
-                
-                consoleDiv.innerText = "B.H.Ai: " + aiMsg;
-                speak(aiMsg);
-            } catch (err) {
-                consoleDiv.innerText = "B.H.Ai: Connection Error. Check your API Key.";
-            }
-        }
+    function respond(text) {
+        aiLog.innerText = "Bhai: " + text;
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.onend = () => orb.classList.remove('active');
+        window.speechSynthesis.speak(utter);
+    }
 
-        // 3. FUNCTIONAL VOICE & FACE SYNC
-        function speak(text) {
-            const synth = window.speechSynthesis;
-            const utter = new SpeechSynthesisUtterance(text);
-            
-            utter.onstart = () => aiFace.classList.add('talking');
-            utter.onend = () => aiFace.classList.remove('talking');
-            
-            synth.speak(utter);
-        }
-    </script>
+    window.onload = () => {
+        initLens();
+        recognition.start();
+    };
+</script>
 </body>
 </html>
